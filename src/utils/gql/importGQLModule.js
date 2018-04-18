@@ -1,0 +1,66 @@
+/* @flow */
+import importFrom from 'import-from';
+import PackageDownloader from './PackageDownloader';
+import { getGQLConfig } from './gqlConfig';
+import { type ILogger } from './types';
+
+type Options = {|
+  cwd: string,
+  autoDownload: boolean,
+  logger: ILogger,
+|};
+
+export const GQL_MODULE_NAME = '@playlyfe/gql';
+
+export default async function importGQLModule({
+  cwd,
+  autoDownload,
+  logger,
+}: Options): Promise<{ path: string, module: any }> {
+  try {
+    // try to load package from cwd
+    const mod = importFrom(cwd, GQL_MODULE_NAME);
+    return {
+      module: mod,
+      path: cwd,
+    };
+  } catch (err) {
+    logger.info(`${GQL_MODULE_NAME} not found in path ${cwd}`);
+    if (autoDownload) {
+      logger.info(
+        `(autoDownloadGQL: true) Trying to download ${GQL_MODULE_NAME}...`,
+      );
+
+      logger.info(`Getting ${GQL_MODULE_NAME} version from .gqlConfig...`);
+      const gqlConfig = getGQLConfig(cwd);
+      const { version } = gqlConfig;
+
+      if (!version) {
+        logger.error(
+          `No valid version of ${GQL_MODULE_NAME} found in .gqlconfig` +
+            ` (Please specify a valid package version in .gqlconfig to auto download package.)`,
+        );
+        throw err;
+      }
+
+      logger.info(`${GQL_MODULE_NAME} version ${version} found in .gqlconfig.`);
+      const pkgPath = await new PackageDownloader({ logger }).getPackage({
+        name: GQL_MODULE_NAME,
+        version,
+      });
+
+      const mod = importFrom(pkgPath, GQL_MODULE_NAME);
+
+      return {
+        module: mod,
+        path: pkgPath,
+      };
+    }
+
+    logger.info(
+      `Skipping auto download ${GQL_MODULE_NAME} (autoDownloadGQL: false).`,
+    );
+
+    throw err;
+  }
+}

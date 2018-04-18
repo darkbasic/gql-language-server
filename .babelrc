@@ -1,0 +1,17 @@
+{
+  presets: [
+    [
+      'playlyfe', {
+        react: false,
+        asyncAwait: true,
+        targets: {
+          "node": "6.10",
+        },
+      }
+    ],
+  ],
+  plugins: [
+    ['module-resolver', { root: ['./src'] }],
+    ['./scripts/flow-runtime', { annotate: false, assert: false }]
+  ],
+}
